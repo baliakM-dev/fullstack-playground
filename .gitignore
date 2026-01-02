@@ -1,1 +1,12 @@
 .idea
+BFF_KEYCLOAK_SPRING_VUE/.idea
+BFF_KEYCLOAK_SPRING_VUE/keycloak_app/build
+BFF_KEYCLOAK_SPRING_VUE/keycloak_app/.gitattributes
+BFF_KEYCLOAK_SPRING_VUE/keycloak_app/.gradle
+BFF_KEYCLOAK_SPRING_VUE/keycloak_app/gradle
+BFF_KEYCLOAK_SPRING_VUE/vue-bff/node_modules
+BFF_KEYCLOAK_SPRING_VUE/vue-bff/.vscode
+BFF_KEYCLOAK_SPRING_VUE/vue-bff/dist
+BFF_KEYCLOAK_SPRING_VUE/vue-bff/dist-ssr
+BFF_KEYCLOAK_SPRING_VUE/vue-bff/.idea
+BFF_KEYCLOAK_SPRING_VUE/vue-bff/.DS_Store
