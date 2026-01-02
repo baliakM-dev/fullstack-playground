@@ -9,6 +9,8 @@ services:
   postgres:
     image: postgres:16-alpine # Používame ľahkú verziu Postgres 16
     container_name: postgres # Pevné meno, na, ktoré sa Keycloak pripojí
+    env_file:
+      - .env
     volumes:
       # Pripájame pomenovaný volume 'postgres_data' na adresár v kontajneri.
       # Toto zabezpečí, že dáta (používatelia, realm…) prežijú reštart.
@@ -44,6 +46,8 @@ services:
     # Pridal som --import-realm.
     # Ak vložíš súbor 'realm-export.json' do priečinka ./keycloak-data/import (viď volumes),
     # Keycloak sa spustí už predkonfigurovaný (s klientmi, rolami atď).
+    env_file:
+      - .env
     networks:
       - keycloak_network # Pripojenie do našej siete
     depends_on:

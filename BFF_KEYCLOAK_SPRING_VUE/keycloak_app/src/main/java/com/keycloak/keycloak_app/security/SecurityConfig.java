@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,6 +13,8 @@ import org.springframework.security.config.annotation.web.configurers.SessionMan
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
@@ -249,6 +252,27 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
+                /**
+                 * =========================================================
+                 * API-FIRST ERROR RESPONSES
+                 * =========================================================
+                 * <p>
+                 * EN:
+                 * Keep API responses predictable for XHR/fetch:
+                 *  - unauthenticated → 401 (no OAuth redirect)
+                 *  - authenticated without role → 403
+                 * <p>
+                 * SK:
+                 * Predvídateľné API odpovede pre XHR/fetch:
+                 *  - neautentifikovaný → 401 (bez OAuth redirectu)
+                 *  - prihlásený bez roly → 403
+                 */
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                        )
+                        .accessDeniedHandler(new AccessDeniedHandlerImpl())
+                )
 
                 /**
                  * =========================================================

@@ -38,6 +38,7 @@ const isHr = computed(() => roles.value.includes("hr") || isAdmin.value);
           <v-list>
             <v-list-item>
               <v-list-item-title>{{ auth.me.email }}</v-list-item-title>
+              <v-list-item-title>{{ roles }}</v-list-item-title>
             </v-list-item>
 
             <v-divider />

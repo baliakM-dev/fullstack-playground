@@ -2,48 +2,16 @@ server:
   port: 8080
   # EN: Backend (BFF) HTTP port.
   # SK: Port, na ktorom beží Spring Boot backend.
-  servlet:
-    session:
-      cookie:
-        http-only: true
-        # EN: Prevents JavaScript access to session cookie (XSS protection).
-        # SK: Zabraňuje prístupu k session cookie z JavaScriptu (ochrana proti XSS).
-        secure: false
-        # EN: Cookie sent only over HTTPS. Must be true in production.
-        # SK: Cookie sa posiela iba cez HTTPS. V produkcii MUSÍ byť true.
-        same-site: lax
-        # EN: CSRF protection level.
-        #     lax = allows OAuth redirects (Keycloak → backend).
-        # SK: Ochrana proti CSRF.
-        #     lax umožňuje OAuth redirecty (Keycloak → backend).
 
 spring:
   application:
     name: keycloak_app
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  security:
-    oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: bff-client
-            # EN: OAuth2 client identifier registered in Keycloak.
-            # SK: Identifikátor OAuth2 klienta v Keycloaku.
-            client-secret: Gd6rnTQ0Q9m3knUtOoBg6R1iWfM2lcvW
-            # EN: Client secret. Must never be exposed to frontend.
-            # SK: Tajný kľúč klienta. NIKDY nepatrí do frontend kódu.
-            scope:
-              - openid
-              - profile
-              - email
-              # EN: OIDC scopes requested from the IdP.
-              # SK: OIDC scope-y vyžiadané od Identity Providera.
-        provider:
-          keycloak:
-            issuer-uri: http://localhost:8081/realms/my_realm
 
 app:
-  frontend-url: "http://localhost:3000"
+  frontend-url: ${APP_FRONTEND_URL}
   csp:
     policy: >
       default-src 'self';

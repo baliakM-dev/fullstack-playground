@@ -1,0 +1,44 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${KEYCLOAK_CLIENT_ID:bff-client}
+            # EN: OAuth2 client identifier registered in Keycloak.
+            # SK: Identifikátor OAuth2 klienta v Keycloaku.
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:dev-keycloak-secret}
+            # EN: Client secret. Must never be exposed to frontend.
+            # SK: Tajný kľúč klienta. NIKDY nepatrí do frontend kódu.
+            scope:
+              - openid
+              - profile
+              - email
+              # EN: OIDC scopes requested from the IdP.
+              # SK: OIDC scope-y vyžiadané od Identity Providera.
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/my_realm}
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        # EN: Prevents JavaScript access to session cookie (XSS protection).
+        # SK: Zabraňuje prístupu k session cookie z JavaScriptu (ochrana proti XSS).
+        secure: false
+        #        # EN: Cookie sent only over HTTPS. Must be true in production.
+        #        # SK: Cookie sa posiela iba cez HTTPS. V produkcii MUSÍ byť true.
+        same-site: lax
+        #        # EN: CSRF protection level.
+        #        #     lax = allows OAuth redirects (Keycloak → backend).
+        #        # SK: Ochrana proti CSRF.
+        #        #     lax umožňuje OAuth redirecty (Keycloak → backend).
+
+app:
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}

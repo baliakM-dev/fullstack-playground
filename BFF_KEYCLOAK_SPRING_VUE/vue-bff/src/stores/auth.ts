@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { api } from "../lib/api";
+import { loginUrl, logoutUrl } from "../lib/env";
 
 export type Me = {
     username: string;
@@ -43,15 +44,14 @@ export const useAuthStore = defineStore("auth", {
 
         // 🔐 LOGIN = browser redirect
         loginRedirect() {
-            window.location.href =
-                "http://localhost:8080/oauth2/authorization/keycloak";
+            window.location.href = loginUrl;
         },
 
         // 🔐 LOGOUT = browser redirect (❗ žiadny axios ❗)
         logout() {
             const form = document.createElement("form");
             form.method = "POST";
-            form.action = "http://localhost:8080/logout";
+            form.action = logoutUrl;
 
             document.body.appendChild(form);
             form.submit();
