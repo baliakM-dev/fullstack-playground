@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { reactive, watchEffect } from "vue";
-import AppButton from "@/components/ui/AppButton.vue";
-import AppField from "@/components/ui/AppField.vue";
+import { computed, reactive, watch } from "vue";
 import type { Tag } from "@/api/tags";
 
 const props = defineProps<{
@@ -14,54 +12,65 @@ const emit = defineEmits<{
   (e: "save", payload: { name: string }): void;
 }>();
 
+// proxy pre v-model (props sú readonly)
+const open = computed({
+  get: () => props.modelValue,
+  set: (v: boolean) => emit("update:modelValue", v),
+});
+
 const form = reactive({ name: "" });
 const errors = reactive<{ name?: string }>({});
 
-watchEffect(() => {
-  form.name = props.tag?.name ?? "";
-  errors.name = undefined;
-});
+watch(
+    () => props.tag,
+    (t) => {
+      form.name = t?.name ?? "";
+      errors.name = undefined;
+    },
+    { immediate: true }
+);
 
 function close() {
-  emit("update:modelValue", false);
+  open.value = false;
 }
 
 function submit() {
   errors.name = undefined;
 
-  if (!form.name.trim()) {
+  const name = form.name.trim();
+  if (!name) {
     errors.name = "Name is required";
     return;
   }
 
-  emit("save", { name: form.name.trim() });
-  close();
+  emit("save", { name });
 }
 </script>
 
 <template>
-  <div v-if="modelValue" class="modal">
-    <div class="card">
-      <h3>{{ tag ? "Edit tag" : "New tag" }}</h3>
+  <v-dialog v-model="open" max-width="560">
+    <v-card rounded="xl">
+      <v-card-title class="text-h6">
+        {{ tag ? "Edit tag" : "New tag" }}
+      </v-card-title>
 
-      <form class="grid" @submit.prevent="submit">
-        <AppField label="Name" :error="errors.name">
-          <input v-model="form.name" class="input" maxlength="60" />
-        </AppField>
+      <v-card-text class="pt-2">
+        <v-text-field
+            v-model="form.name"
+            label="Name"
+            placeholder="e.g. urgent"
+            maxlength="60"
+            :error="!!errors.name"
+            :error-messages="errors.name ? [errors.name] : []"
+            @keyup.enter="submit"
+        />
+      </v-card-text>
 
-        <div class="row">
-          <AppButton variant="secondary" @click="close">Cancel</AppButton>
-          <AppButton type="submit">Save</AppButton>
-        </div>
-      </form>
-    </div>
-  </div>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="close">Cancel</v-btn>
+        <v-btn color="primary" @click="submit">Save</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
-
-<style scoped>
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: grid; place-items: center; padding: 16px; }
-.card { width: min(520px, 100%); background: #fff; border-radius: 14px; border: 1px solid #eee; padding: 16px; }
-.grid { display: grid; gap: 12px; margin-top: 12px; }
-.row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-.input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px 10px; }
-</style>

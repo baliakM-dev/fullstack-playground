@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import AppButton from "@/components/ui/AppButton.vue";
-import TodoForm from "../components/todo/TodoForm.vue";
+import TodoForm from "@/components/todo/TodoForm.vue";
 import { useProjectsStore } from "@/stores/projects";
 import { useTagsStore } from "@/stores/tags";
 import { useTodosStore } from "@/stores/todos";
-import type { Todo } from "@/api/todos";
+import type { Todo, TodoListParams, TodoStatus } from "@/api/todos";
 
 const projects = useProjectsStore();
 const tags = useTagsStore();
@@ -15,7 +14,10 @@ const open = ref(false);
 const editing = ref<Todo | null>(null);
 
 const filterProjectId = ref<string>("");
-const filterStatus = ref<string>("");
+const filterStatus = ref<"" | TodoStatus>("");
+
+const confirmOpen = ref(false);
+const toDelete = ref<Todo | null>(null);
 
 onMounted(async () => {
   if (projects.items.length === 0) await projects.load();
@@ -24,7 +26,7 @@ onMounted(async () => {
 });
 
 async function loadTodos() {
-  const params: any = {};
+  const params: TodoListParams = {};
   if (filterProjectId.value) params.projectId = filterProjectId.value;
   if (filterStatus.value) params.status = filterStatus.value;
   await todos.load(params);
@@ -45,97 +47,146 @@ function edit(todo: Todo) {
 async function save(payload: any) {
   if (editing.value) await todos.update(editing.value.id, payload);
   else await todos.create(payload);
+  open.value = false;
   await loadTodos();
 }
 
-async function remove(todo: Todo) {
-  if (!confirm(`Delete todo "${todo.title}"?`)) return;
-  await todos.remove(todo.id);
+function askDelete(todo: Todo) {
+  toDelete.value = todo;
+  confirmOpen.value = true;
+}
+
+async function confirmDelete() {
+  if (!toDelete.value) return;
+  await todos.remove(toDelete.value.id);
+  confirmOpen.value = false;
+  toDelete.value = null;
   await loadTodos();
 }
 
 const rows = computed(() => todos.items);
+
+const projectOptions = computed(() => [
+  { title: "All", value: "" },
+  ...projects.items.map((p) => ({ title: p.name, value: p.id })),
+]);
+
+const statusOptions = [
+  { title: "All", value: "" },
+  { title: "OPEN", value: "OPEN" },
+  { title: "IN_PROGRESS", value: "IN_PROGRESS" },
+  { title: "DONE", value: "DONE" },
+];
 </script>
 
 <template>
-  <div class="page">
-    <div class="header">
-      <h2>Todos</h2>
-      <AppButton @click="newTodo">New</AppButton>
-    </div>
+  <v-card class="pa-4" rounded="xl" elevation="1">
+    <v-card-title class="d-flex align-center">
+      <div class="text-h6">Todos</div>
+      <v-spacer />
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="newTodo">
+        New
+      </v-btn>
+    </v-card-title>
 
-    <div class="filters">
-      <label class="filter">
-        <span>Project</span>
-        <select v-model="filterProjectId" class="input">
-          <option value="">All</option>
-          <option v-for="p in projects.items" :key="p.id" :value="p.id">
-            {{ p.name }}
-          </option>
-        </select>
-      </label>
+    <v-divider class="my-2" />
 
-      <label class="filter">
-        <span>Status</span>
-        <select v-model="filterStatus" class="input">
-          <option value="">All</option>
-          <option value="OPEN">OPEN</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="DONE">DONE</option>
-        </select>
-      </label>
-    </div>
+    <v-card-text>
+      <!-- Filters -->
+      <v-row class="mb-2" dense>
+        <v-col cols="12" sm="6" md="4">
+          <v-select
+              v-model="filterProjectId"
+              :items="projectOptions"
+              item-title="title"
+              item-value="value"
+              label="Project"
+              variant="outlined"
+              density="comfortable"
+          />
+        </v-col>
 
-    <div v-if="todos.loading" class="muted">Loading...</div>
+        <v-col cols="12" sm="6" md="4">
+          <v-select
+              v-model="filterStatus"
+              :items="statusOptions"
+              item-title="title"
+              item-value="value"
+              label="Status"
+              variant="outlined"
+              density="comfortable"
+          />
+        </v-col>
+      </v-row>
 
-    <div class="list">
-      <div v-for="t in rows" :key="t.id" class="card">
-        <div class="top">
-          <div class="title">{{ t.title }}</div>
-          <div class="meta">
-            <span class="pill">{{ t.status }}</span>
-            <span class="pill">{{ t.priority }}</span>
-            <span class="pill">Project: {{ t.projectName }}</span>
-            <span v-if="t.dueDate" class="pill">Due: {{ t.dueDate }}</span>
-          </div>
-        </div>
+      <v-progress-linear v-if="todos.loading" indeterminate class="mb-4" />
 
-        <div v-if="t.description" class="desc">{{ t.description }}</div>
+      <v-alert
+          v-if="!todos.loading && rows.length === 0"
+          type="info"
+          variant="tonal"
+          title="No todos yet"
+          text="Create your first todo."
+      />
 
-        <div class="tagrow" v-if="t.tags.length">
-          <span v-for="tag in t.tags" :key="tag.id" class="tag">#{{ tag.name }}</span>
-        </div>
+      <!-- Todo cards -->
+      <v-row v-else dense>
+        <v-col v-for="t in rows" :key="t.id" cols="12" md="6" lg="4">
+          <v-card rounded="xl" elevation="1">
+            <v-card-title class="d-flex align-start ga-2">
+              <div class="text-subtitle-1 font-weight-bold">
+                {{ t.title }}
+              </div>
+              <v-spacer />
+              <v-btn icon="mdi-pencil" variant="text" @click="edit(t)" />
+              <v-btn icon="mdi-delete" variant="text" color="error" @click="askDelete(t)" />
+            </v-card-title>
 
-        <div class="actions">
-          <AppButton variant="secondary" @click="edit(t)">Edit</AppButton>
-          <AppButton variant="danger" @click="remove(t)">Delete</AppButton>
-        </div>
-      </div>
+            <v-card-text class="pt-0">
+              <div v-if="t.description" class="text-body-2 text-medium-emphasis mb-3">
+                {{ t.description }}
+              </div>
+              <div class="d-flex flex-wrap ga-2 mb-3">
+                <v-chip size="small" label>{{ t.status }}</v-chip>
+                <v-chip size="small" label>{{ t.priority }}</v-chip>
+                <v-chip size="small" label>Project: {{ t.projectName }}</v-chip>
+                <v-chip v-if="t.dueDate" size="small" label>Due: {{ t.dueDate }}</v-chip>
+              </div>
 
-      <div v-if="!todos.loading && rows.length === 0" class="muted">
-        No todos yet.
-      </div>
-    </div>
+              <div v-if="t.tags?.length" class="d-flex flex-wrap ga-2">
+                <v-chip
+                    v-for="tag in t.tags"
+                    :key="tag.id"
+                    size="small"
+                    variant="tonal"
+                    label
+                >
+                  #{{ tag.name }}
+                </v-chip>
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-card-text>
+  </v-card>
 
-    <TodoForm v-model="open" :todo="editing" @save="save" />
-  </div>
+  <!-- Create/Edit dialog -->
+  <TodoForm v-model="open" :todo="editing" @save="save" />
+
+  <!-- Delete confirm dialog -->
+  <v-dialog v-model="confirmOpen" max-width="520">
+    <v-card rounded="xl">
+      <v-card-title class="text-h6">Delete todo?</v-card-title>
+      <v-card-text>
+        This will delete:
+        <div class="font-weight-medium mt-2">{{ toDelete?.title }}</div>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="confirmOpen = false">Cancel</v-btn>
+        <v-btn color="error" @click="confirmDelete">Delete</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
-
-<style scoped>
-.page { display: grid; gap: 12px; }
-.header { display: flex; justify-content: space-between; align-items: center; }
-.filters { display: flex; gap: 10px; flex-wrap: wrap; }
-.filter { display: grid; gap: 6px; font-size: 12px; color: #444; }
-.input { border: 1px solid #ddd; border-radius: 10px; padding: 8px 10px; min-width: 220px; }
-.list { display: grid; gap: 10px; }
-.card { border: 1px solid #eee; border-radius: 14px; background: #fff; padding: 12px; display: grid; gap: 10px; }
-.top { display: grid; gap: 6px; }
-.title { font-weight: 900; font-size: 16px; }
-.meta { display: flex; gap: 8px; flex-wrap: wrap; }
-.pill { font-size: 12px; border: 1px solid #eee; padding: 4px 8px; border-radius: 999px; color: #333; }
-.desc { color: #555; }
-.tagrow { display: flex; gap: 8px; flex-wrap: wrap; }
-.tag { font-size: 12px; border: 1px solid #eee; padding: 4px 8px; border-radius: 999px; color: #333; }
-.actions { display: flex; gap: 8px; justify-content: flex-end; }
-.muted { color: #777; }
-</style>

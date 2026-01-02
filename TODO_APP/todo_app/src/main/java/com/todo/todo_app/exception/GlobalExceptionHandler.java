@@ -43,11 +43,6 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "Data integrity violation", req.getRequestURI(), List.of());
     }
 
-//    @ExceptionHandler(Exception.class)
-//    ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
-//        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req.getRequestURI(), List.of());
-//    }
-
     private ResponseEntity<ApiError> build(HttpStatus status, String message, String path, List<ApiError.FieldViolation> violations) {
         ApiError body = new ApiError(
                 Instant.now(),

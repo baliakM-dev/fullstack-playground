@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { reactive, watchEffect } from "vue";
-import AppButton from "@/components/ui/AppButton.vue";
-import AppField from "@/components/ui/AppField.vue";
+import { computed, reactive, watch } from "vue";
 import type { Project } from "@/api/projects";
 
 const props = defineProps<{
   modelValue: boolean;
-  project?: Project | null;
+  project: Project | null;
 }>();
 
 const emit = defineEmits<{
@@ -14,89 +12,68 @@ const emit = defineEmits<{
   (e: "save", payload: { name: string; description?: string | null }): void;
 }>();
 
+// proxy pre v-model (lebo props sú readonly)
+const open = computed({
+  get: () => props.modelValue,
+  set: (v: boolean) => emit("update:modelValue", v),
+});
+
 const form = reactive({
   name: "",
-  description: "" as string,
+  description: "" as string | null,
 });
 
-const errors = reactive<{ name?: string }>({});
-
-watchEffect(() => {
-  if (props.project) {
-    form.name = props.project.name;
-    form.description = props.project.description ?? "";
-  } else {
-    form.name = "";
-    form.description = "";
-  }
-  errors.name = undefined;
-});
+watch(
+    () => props.project,
+    (p) => {
+      form.name = p?.name ?? "";
+      form.description = p?.description ?? null;
+    },
+    { immediate: true }
+);
 
 function close() {
-  emit("update:modelValue", false);
+  open.value = false;
 }
 
 function submit() {
-  errors.name = undefined;
-
-  if (!form.name.trim()) {
-    errors.name = "Name is required";
-    return;
-  }
-
   emit("save", {
     name: form.name.trim(),
-    description: form.description.trim() ? form.description.trim() : null,
+    description: form.description?.trim() || null,
   });
-  close();
 }
 </script>
 
 <template>
-  <div v-if="modelValue" class="modal">
-    <div class="card">
-      <h3>{{ project ? "Edit project" : "New project" }}</h3>
+  <v-dialog v-model="open" max-width="640">
+    <v-card rounded="xl">
+      <v-card-title class="text-h6">
+        {{ project ? "Edit project" : "New project" }}
+      </v-card-title>
 
-      <form class="grid" @submit.prevent="submit">
-        <AppField label="Name" :error="errors.name">
-          <input v-model="form.name" class="input" maxlength="120" />
-        </AppField>
+      <v-card-text class="pt-2">
+        <v-text-field
+            v-model="form.name"
+            label="Name"
+            placeholder="e.g. Work"
+            required
+        />
 
-        <AppField label="Description">
-          <textarea v-model="form.description" class="input" rows="3" maxlength="2000" />
-        </AppField>
+        <v-textarea
+            v-model="form.description"
+            label="Description"
+            placeholder="Optional"
+            rows="3"
+        />
+      </v-card-text>
 
-        <div class="row">
-          <AppButton variant="secondary" @click="close">Cancel</AppButton>
-          <AppButton type="submit">Save</AppButton>
-        </div>
-      </form>
-    </div>
-  </div>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="close">Cancel</v-btn>
+        <v-btn color="primary" @click="submit">
+          {{ project ? "Save" : "Create" }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
-
-<style scoped>
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.35);
-  display: grid;
-  place-items: center;
-  padding: 16px;
-}
-.card {
-  width: min(560px, 100%);
-  background: #fff;
-  border-radius: 14px;
-  border: 1px solid #eee;
-  padding: 16px;
-}
-.grid { display: grid; gap: 12px; margin-top: 12px; }
-.row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-.input {
-  width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-</style>

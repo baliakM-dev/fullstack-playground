@@ -7,8 +7,8 @@ export default createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         { path: "/", redirect: "/todos" },
-        { path: "/todos", component: TodosView },
-        { path: "/projects", component: ProjectsView },
-        { path: "/tags", component: TagsView },
+        { path: "/todos", component: TodosView, meta: { title: "Todos" } },
+        { path: "/projects", component: ProjectsView, meta: { title: "Projects" } },
+        { path: "/tags", component: TagsView, meta: { title: "Tags" } },
     ],
 });

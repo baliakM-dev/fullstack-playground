@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, watchEffect } from "vue";
-import AppButton from "@/components/ui/AppButton.vue";
-import AppField from "@/components/ui/AppField.vue";
+import { computed, reactive, watch } from "vue";
 import type { Todo, TodoPriority, TodoStatus } from "@/api/todos";
 import { useProjectsStore } from "@/stores/projects";
 import { useTagsStore } from "@/stores/tags";
@@ -23,13 +21,18 @@ const emit = defineEmits<{
     priority: TodoPriority;
     dueDate?: string | null;
     projectId: string;
-    tagIds?: string[] | null;
+    tagIds?: string[];
   }): void;
 }>();
 
+const open = computed({
+  get: () => props.modelValue,
+  set: (v: boolean) => emit("update:modelValue", v),
+});
+
 const form = reactive({
   title: "",
-  description: "",
+  description: "" as string,
   status: "OPEN" as TodoStatus,
   priority: "MEDIUM" as TodoPriority,
   dueDate: "" as string, // yyyy-mm-dd
@@ -39,46 +42,53 @@ const form = reactive({
 
 const errors = reactive<{ title?: string; projectId?: string }>({});
 
-watchEffect(() => {
-  if (props.todo) {
-    form.title = props.todo.title;
-    form.description = props.todo.description ?? "";
-    form.status = props.todo.status;
-    form.priority = props.todo.priority;
-    form.dueDate = props.todo.dueDate ?? "";
-    form.projectId = props.todo.projectId;
-    form.tagIds = props.todo.tags.map((t) => t.id);
-  } else {
-    form.title = "";
-    form.description = "";
-    form.status = "OPEN";
-    form.priority = "MEDIUM";
-    form.dueDate = "";
-    form.projectId = projects.items[0]?.id ?? "";
-    form.tagIds = [];
-  }
+watch(
+    () => props.todo,
+    (t) => {
+      if (t) {
+        form.title = t.title;
+        form.description = t.description ?? "";
+        form.status = t.status;
+        form.priority = t.priority;
+        form.dueDate = t.dueDate ?? "";
+        form.projectId = t.projectId;
+        form.tagIds = (t.tags ?? []).map((x) => x.id);
+      } else {
+        form.title = "";
+        form.description = "";
+        form.status = "OPEN";
+        form.priority = "MEDIUM";
+        form.dueDate = "";
+        form.projectId = projects.items[0]?.id ?? "";
+        form.tagIds = [];
+      }
+      errors.title = undefined;
+      errors.projectId = undefined;
+    },
+    { immediate: true }
+);
 
-  errors.title = undefined;
-  errors.projectId = undefined;
-});
+const projectItems = computed(() =>
+    projects.items.map((p) => ({ title: p.name, value: p.id }))
+);
 
-const tagOptions = computed(() => tagsStore.items);
+const tagItems = computed(() =>
+    tagsStore.items.map((t) => ({ title: t.name, value: t.id }))
+);
 
-function toggleTag(tagId: string) {
-  const idx = form.tagIds.indexOf(tagId);
-  if (idx >= 0) form.tagIds.splice(idx, 1);
-  else form.tagIds.push(tagId);
-}
+const statusItems = ["OPEN", "IN_PROGRESS", "DONE"];
+const priorityItems = ["LOW", "MEDIUM", "HIGH"];
 
 function close() {
-  emit("update:modelValue", false);
+  open.value = false;
 }
 
 function submit() {
   errors.title = undefined;
   errors.projectId = undefined;
 
-  if (!form.title.trim()) {
+  const title = form.title.trim();
+  if (!title) {
     errors.title = "Title is required";
     return;
   }
@@ -88,96 +98,112 @@ function submit() {
   }
 
   emit("save", {
-    title: form.title.trim(),
+    title,
     description: form.description.trim() ? form.description.trim() : null,
     status: form.status,
     priority: form.priority,
     dueDate: form.dueDate ? form.dueDate : null,
     projectId: form.projectId,
-    tagIds: form.tagIds.length ? form.tagIds : [],
+    tagIds: form.tagIds,
   });
-  close();
 }
 </script>
 
 <template>
-  <div v-if="modelValue" class="modal">
-    <div class="card">
-      <h3>{{ todo ? "Edit todo" : "New todo" }}</h3>
+  <v-dialog v-model="open" max-width="760">
+    <v-card rounded="xl">
+      <v-card-title class="text-h6">
+        {{ todo ? "Edit todo" : "New todo" }}
+      </v-card-title>
 
-      <form class="grid" @submit.prevent="submit">
-        <AppField label="Title" :error="errors.title">
-          <input v-model="form.title" class="input" maxlength="120" />
-        </AppField>
+      <v-card-text class="pt-2">
+        <v-text-field
+            v-model="form.title"
+            label="Title"
+            maxlength="120"
+            :error="!!errors.title"
+            :error-messages="errors.title ? [errors.title] : []"
+        />
 
-        <AppField label="Description">
-          <textarea v-model="form.description" class="input" rows="3" maxlength="2000" />
-        </AppField>
+        <v-textarea
+            v-model="form.description"
+            label="Description"
+            maxlength="2000"
+            rows="3"
+        />
 
-        <div class="cols">
-          <AppField label="Status">
-            <select v-model="form.status" class="input">
-              <option value="OPEN">OPEN</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="DONE">DONE</option>
-            </select>
-          </AppField>
+        <v-row dense>
+          <v-col cols="12" sm="6">
+            <v-select
+                v-model="form.status"
+                :items="statusItems"
+                label="Status"
+                variant="outlined"
+            />
+          </v-col>
 
-          <AppField label="Priority">
-            <select v-model="form.priority" class="input">
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-            </select>
-          </AppField>
-        </div>
+          <v-col cols="12" sm="6">
+            <v-select
+                v-model="form.priority"
+                :items="priorityItems"
+                label="Priority"
+                variant="outlined"
+            />
+          </v-col>
+        </v-row>
 
-        <div class="cols">
-          <AppField label="Due date">
-            <input v-model="form.dueDate" type="date" class="input" />
-          </AppField>
+        <v-row dense>
+          <v-col cols="12" sm="6">
+            <v-text-field
+                v-model="form.dueDate"
+                type="date"
+                label="Due date"
+                variant="outlined"
+            />
+          </v-col>
 
-          <AppField label="Project" :error="errors.projectId">
-            <select v-model="form.projectId" class="input">
-              <option value="" disabled>Select project...</option>
-              <option v-for="p in projects.items" :key="p.id" :value="p.id">
-                {{ p.name }}
-              </option>
-            </select>
-          </AppField>
-        </div>
+          <v-col cols="12" sm="6">
+            <v-select
+                v-model="form.projectId"
+                :items="projectItems"
+                item-title="title"
+                item-value="value"
+                label="Project"
+                variant="outlined"
+                :error="!!errors.projectId"
+                :error-messages="errors.projectId ? [errors.projectId] : []"
+            />
+          </v-col>
+        </v-row>
 
-        <div class="tagbox">
-          <div class="tagbox-title">Tags</div>
-          <div class="taggrid">
-            <label v-for="t in tagOptions" :key="t.id" class="tagitem">
-              <input type="checkbox" :checked="form.tagIds.includes(t.id)" @change="toggleTag(t.id)" />
-              <span>{{ t.name }}</span>
-            </label>
-            <div v-if="tagOptions.length === 0" class="muted">No tags yet</div>
-          </div>
-        </div>
+        <v-select
+            v-model="form.tagIds"
+            :items="tagItems"
+            item-title="title"
+            item-value="value"
+            label="Tags"
+            variant="outlined"
+            multiple
+            chips
+            closable-chips
+        />
 
-        <div class="row">
-          <AppButton variant="secondary" @click="close">Cancel</AppButton>
-          <AppButton type="submit">Save</AppButton>
-        </div>
-      </form>
-    </div>
-  </div>
+        <v-alert
+            v-if="tagItems.length === 0"
+            type="info"
+            variant="tonal"
+            class="mt-3"
+            text="No tags yet — create tags first if you want to label todos."
+        />
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="close">Cancel</v-btn>
+        <v-btn color="primary" @click="submit">
+          {{ todo ? "Save" : "Create" }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
-
-<style scoped>
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: grid; place-items: center; padding: 16px; }
-.card { width: min(720px, 100%); background: #fff; border-radius: 14px; border: 1px solid #eee; padding: 16px; }
-.grid { display: grid; gap: 12px; margin-top: 12px; }
-.cols { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
-.row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
-.input { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 8px 10px; }
-.tagbox { border: 1px solid #eee; border-radius: 12px; padding: 12px; }
-.tagbox-title { font-size: 12px; color: #444; margin-bottom: 8px; font-weight: 600; }
-.taggrid { display: flex; flex-wrap: wrap; gap: 10px 14px; }
-.tagitem { display: inline-flex; gap: 8px; align-items: center; border: 1px solid #eee; padding: 6px 10px; border-radius: 999px; }
-.muted { color: #777; font-size: 12px; }
-@media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
-</style>
