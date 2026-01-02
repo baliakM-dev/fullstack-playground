@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: todo-app
+
+  datasource:
+    url: ${POSTGRES_TODODB_URL:jdbc:postgresql://localhost:5433/tododb}
+    username: ${POSTGRES_TODODB_USER:todo}
+    password: ${POSTGRES_TODODB_PASSWORD:todopassword}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  jackson:
+    time-zone: UTC
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui
+    operations-sorter: method
+    tags-sorter: alpha
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+    org.springframework.web: info

@@ -1,0 +1,31 @@
+networks:
+  todo-app-net:
+    name: todo-app-net
+    driver: bridge
+
+
+services:
+  todo-postgres:
+    image: postgres:16-alpine
+    container_name: todo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_TODODB_DB:-tododb}
+      POSTGRES_USER: ${POSTGRES_TODODB_USER:-todo}
+      POSTGRES_PASSWORD: ${POSTGRES_TODODB_PASSWORD:-todopassword}
+    ports:
+      - "5433:5432"
+    volumes:
+      - todo_pg_data:/var/lib/postgresql/data
+    networks:
+      - todo-app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_TODODB_USER:-todo} -d ${POSTGRES_TODODB_DB:-tododb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  todo_pg_data:
+    driver: local

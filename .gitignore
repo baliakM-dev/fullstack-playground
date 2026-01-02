@@ -10,3 +10,14 @@ BFF_KEYCLOAK_SPRING_VUE/vue-bff/dist
 BFF_KEYCLOAK_SPRING_VUE/vue-bff/dist-ssr
 BFF_KEYCLOAK_SPRING_VUE/vue-bff/.idea
 BFF_KEYCLOAK_SPRING_VUE/vue-bff/.DS_Store
+
+TODO_APP/todo_app/build
+TODO_APP/todo_app/.gitattributes
+TODO_APP/todo_app/.gradle
+TODO_APP/todo_app/gradle
+TODO_APP/frontend/node_modules
+TODO_APP/frontend/.vscode
+TODO_APP/frontend/dist
+TODO_APP/frontend/dist-ssr
+TODO_APP/frontend/.idea
+TODO_APP/frontend/.DS_Store
